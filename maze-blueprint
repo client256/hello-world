@@ -1,0 +1,311 @@
+#include <iostream>
+#include <queue>
+#include <deque>
+using namespace std;
+
+#define WIDTH 5
+#define HEIGHT 5
+
+#define exit_x 0
+#define exit_y 3
+
+#define CPU_x 3
+#define CPU_y 1
+
+class Actor
+{
+public:
+    Actor(int _x, int _y)
+    : x(_x), y(_y) {}
+    int getX() {return x;}
+    int getY() {return y;}
+    void assignNewCoord(int _x, int _y)
+    {
+        x = _x;
+        y = _y;
+    }
+private:
+    int x;
+    int y;
+    
+};
+struct Node {
+    Node(int _x, int _y)
+    : x(_x), y(_y), stepcount(999),
+    visited(false), stepped(false) {}
+    int getstepcount() { return stepcount; }
+    int x;
+    int y;
+    int stepcount;
+    
+    bool visited;
+    bool stepped;
+};
+
+class World {
+public:
+    World() {}
+    ~World() { destroyMaze(); }
+    bool outOfBounds(int x, int y);
+    void initMaze();
+    void displayMaze();
+    void createMazePaths();
+    void destroyMaze();
+    void BFSearch(Actor* CPU);
+    void followShortestPath(Actor* CPU);
+    
+private:
+    Node* maze[WIDTH][HEIGHT];
+};
+
+bool World::outOfBounds(int x, int y)
+{
+    if (x < 0 || y < 0 || x >= WIDTH || y >= HEIGHT)
+        return true;
+    else
+        return false;
+}
+void World::initMaze()
+{
+    for (int i = 0; i < WIDTH; i++)
+        for (int j = 0; j < HEIGHT; j++)
+            maze[i][j] = new Node(i,j);
+}
+
+void World::displayMaze()
+{
+    for (int i = 0; i < WIDTH; i++)
+    {
+        for (int j = 0; j < HEIGHT; j++)
+        {
+            if (maze[i][j]->stepped == true)
+                cout << '.';
+           else if (i == exit_x && j == exit_y)
+                cout << 'E';
+            else if (i == CPU_x && j == CPU_y)
+                cout << 'P';
+            else if (maze[i][j]->stepcount == 999)
+                cout << 'X';
+            else if (maze[i][j]->stepcount < 999)
+                cout << maze[i][j]->stepcount;
+        }
+        cout << endl;
+    }
+}
+
+void World::createMazePaths()
+{
+    
+    maze[CPU_x][CPU_y]->stepcount = 0;
+    maze[exit_x][exit_y]->stepcount = 0;
+    maze[0][2]->stepcount = 0;
+    maze[1][0]->stepcount = 0;
+    maze[3][0]->stepcount = 0;
+    maze[1][1]->stepcount = 0;
+    maze[1][2]->stepcount = 0;
+    maze[2][3]->stepcount = 0;
+    maze[1][4]->stepcount = 0;
+    maze[2][4]->stepcount = 0;
+    maze[2][1]->stepcount = 0;
+    maze[4][1]->stepcount = 0;
+    maze[3][2]->stepcount = 0;
+    maze[2][2]->stepcount = 0;
+}
+
+void World::destroyMaze()
+{
+    for (int i = 0; i < WIDTH; i++)
+        for (int j = 0; j < HEIGHT; j++)
+            if (maze[i][j] != nullptr)
+                delete maze[i][j];
+}
+
+void World::BFSearch(Actor* CPU)
+{
+    // set up queue for BFS
+    deque<Node> q;
+    
+    // insert the exit point (first entry)
+    q.push_front(Node(exit_x, exit_y));
+    
+    // iterate thru maze and find the CPU
+    while(!q.empty())
+    {
+        // get node that is next to be examined
+        Node n = q.front();
+        // then remove it from the queue
+        q.pop_front();
+        
+        // if the CPU is found
+        if (!outOfBounds(n.x, n.y) && (n.x == CPU->getX() && n.y == CPU->getY())) {
+            // make the CPU coordinate as visited
+            maze[CPU->getX()][CPU->getY()]->visited = true;
+            return;
+        }
+        /* 
+         The following if statements which check for all 4 directions (up, down, left, right)
+         so we can insert nodes into the queue for examination
+         
+         Each if statement has an
+         - obligatory outOfBounds check
+         - a (.. != 999) check to avoid inserting obstacles into the queue
+         - a (.. maze[i][j]->visited == false) check so we only insert non-examined nodes into the queue
+         */
+        
+        
+        if (!outOfBounds(n.x+1, n.y) && maze[n.x+1][n.y]->stepcount != 999 && maze[n.x+1][n.y]->visited == false) {
+            // mark the node as visited (to avoid future re-exmamination)
+           maze[n.x+1][n.y]->visited = true;
+            // assign the node's level count in the process of the search
+            maze[n.x+1][n.y]->stepcount = maze[n.x][n.y]->getstepcount()+1;
+            // insert the node into the queue for examination
+            q.push_back(Node(n.x+1, n.y));
+        }
+        
+        if (!outOfBounds(n.x-1, n.y) && maze[n.x-1][n.y]->stepcount != 999 && maze[n.x-1][n.y]->visited == false) {
+           maze[n.x-1][n.y]->visited = true;
+            maze[n.x-1][n.y]->stepcount = maze[n.x][n.y]->getstepcount()+1;
+            q.push_back(Node(n.x-1, n.y));
+        }
+        
+        if (!outOfBounds(n.x, n.y+1) && maze[n.x][n.y+1]->stepcount != 999 && maze[n.x][n.y+1]->visited == false) {
+           maze[n.x][n.y+1]->visited = true;
+            maze[n.x][n.y+1]->stepcount = maze[n.x][n.y]->getstepcount()+1;
+            q.push_back(Node(n.x, n.y+1));
+        }
+        
+        if (!outOfBounds(n.x, n.y-1) && maze[n.x][n.y-1]->stepcount != 999 && maze[n.x][n.y-1]->visited == false) {
+           maze[n.x][n.y-1]->visited = true;
+            maze[n.x][n.y-1]->stepcount = maze[n.x][n.y]->getstepcount()+1;
+            q.push_back(Node(n.x, n.y-1));
+        }
+        
+    } 
+}
+
+void World::followShortestPath(Actor* CPU)
+{
+    // mark current CPU's coordinate as stepped
+    maze[CPU->getX()][CPU->getY()]->stepped = true;
+    
+    for (;;)
+    {
+        // keep track of node w/ smallest stepCount
+        int min = 0;
+        int _x = 0;
+        int _y = 0;
+        
+        if (!outOfBounds(CPU->getX(), CPU->getY()+1) && maze[CPU->getX()][CPU->getY()+1]->visited == true
+            && maze[CPU->getX()][CPU->getY()+1]->stepped == false)
+        {
+         // see if that step is the exit point
+            if (CPU->getX() == exit_x && CPU->getY()+1 == exit_y) {
+                maze[CPU->getX()][CPU->getY()+1]->stepped = true;
+                return;
+            }
+            
+            // since it's the first node that we check
+            // it's automatically min
+            min = maze[CPU->getX()][CPU->getY()+1]->stepcount;
+            
+            _x = CPU->getX();
+            _y = CPU->getY()+1;
+        }
+        
+        if (!outOfBounds(CPU->getX(), CPU->getY()-1) && maze[CPU->getX()][CPU->getY()-1]->visited == true
+            && maze[CPU->getX()][CPU->getY()-1]->stepped == false
+       ) {
+            // see if that step is the exit point
+            if (CPU->getX() == exit_x && CPU->getY()-1 == exit_y) {
+                maze[CPU->getX()][CPU->getY()-1]->stepped = true;
+                return;
+            }
+            
+            // check if it's smaller than node in queue
+            if (maze[CPU->getX()][CPU->getY()-1]->stepcount < min || min == 0) {
+                // assign new smallest stepcount coord
+                _x = CPU->getX();
+                _y = CPU->getY()-1;
+                
+                // assign the new min value
+                min = maze[CPU->getX()][CPU->getY()-1]->stepcount;
+            }
+        }
+        
+        if (!outOfBounds(CPU->getX()+1, CPU->getY()) && maze[CPU->getX()+1][CPU->getY()]->visited == true &&
+            maze[CPU->getX()+1][CPU->getY()]->stepped == false){
+            // see if that step is the exit point
+            if (CPU->getX()+1 == exit_x && CPU->getY() == exit_y) {
+                maze[CPU->getX()+1][CPU->getY()]->stepped = true;
+                return;
+            }
+            
+            // check if it's smaller than node in queue
+            if (maze[CPU->getX()+1][CPU->getY()]->stepcount < min || min == 0) {
+                
+                // assign new smallest stepcount coord
+                _x = CPU->getX()+1;
+                _y = CPU->getY();
+                
+                // assign the new min value
+                min = maze[CPU->getX()+1][CPU->getY()]->stepcount;
+            }
+        }
+        
+        if (!outOfBounds(CPU->getX()-1, CPU->getY()) && maze[CPU->getX()-1][CPU->getY()]->visited == true
+            && maze[CPU->getX()-1][CPU->getY()]->stepped == false) {
+            // see if that step is the exit point
+            if (CPU->getX()-1 == exit_x && CPU->getY() == exit_y) {
+                maze[CPU->getX()-1][CPU->getY()]->stepped = true;
+                return;
+            }
+            
+            // check if it's smaller than node in queue
+            if (maze[CPU->getX()-1][CPU->getY()]->stepcount < min || min == 0) {
+                
+                // assign new smallest stepcount coord
+                _x = CPU->getX()-1;
+                _y = CPU->getY();
+
+                // assign the new min value
+                min = maze[CPU->getX()-1][CPU->getY()]->stepcount;
+            }
+        }
+
+        CPU->assignNewCoord(_x, _y);
+        maze[_x][_y]->stepped = true;
+    }
+}
+
+
+int main()
+{
+    World a;
+    a.initMaze();
+    a.displayMaze();
+    
+    cout << endl << endl;
+    
+    a.createMazePaths();
+    a.displayMaze();
+    
+    Actor* CPU1 = new Actor(CPU_x, CPU_y);
+    
+   a.BFSearch(CPU1);
+    
+    cout << endl << endl;
+    
+    a.displayMaze();
+    
+    a.followShortestPath(CPU1);
+    
+    cout << endl << endl << endl;
+    
+    a.displayMaze();
+    
+    
+    
+    delete CPU1;
+    CPU1 = nullptr;
+}
+
